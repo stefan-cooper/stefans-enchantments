@@ -53,16 +53,29 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
     @EventHandler()
     public void onBlockBreak(BlockBreakEvent event) {
         if (HOLDING_MAGNET(event) || HOLDING_AUTOSMELT(event)) {
+            Block block = event.getBlock();
+            Player player = event.getPlayer();
+
             if (event.getPlayer().getInventory().getItemInMainHand() == null) return;
             if (!event.getPlayer().getInventory().getItemInMainHand().hasItemMeta()) return;
             if (event.getPlayer().getGameMode() == GameMode.CREATIVE) return;
             if (event.getPlayer().getGameMode() == GameMode.SPECTATOR) return;
-            if (event.getPlayer().getInventory().firstEmpty() == -1) return;
+            if (event.getPlayer().getInventory().firstEmpty() == -1) {
+                boolean spaceAvailable = false;
+                for (ItemStack item : event.getPlayer().getInventory()) {
+                    Collection<ItemStack> drops = block.getDrops(player.getInventory().getItemInMainHand());
+                    ItemStack drop = drops.iterator().next();
+                    if (item != null && drop.getType() == item.getType() && item.getAmount() < item.getMaxStackSize()) {
+                        spaceAvailable = true;
+                        break;
+                    }
+                }
+                if(!spaceAvailable) return;
+            }
             if (event.getBlock().getState() instanceof Container) return;
 
             event.setDropItems(false);
-            Player player = event.getPlayer();
-            Block block = event.getBlock();
+
             Location location = event.getBlock().getLocation();
 
             Collection<ItemStack> drops = block.getDrops(player.getInventory().getItemInMainHand());
@@ -117,6 +130,12 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
         } else if (e.getExpLevelCost() > 27 && isBook(e.getItem().getType()) && rn.nextInt(20) < 2 && !e.getItem().containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
             ItemStack item = e.getItem();
             addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, true);
+        }
+
+        // Make mending possible
+        if (e.getExpLevelCost() == 30 && rn.nextInt(51) < 2) {
+            ItemStack item = e.getItem();
+            item.addEnchantment(EnchantmentWrapper.MENDING, 1);
         }
     }
 

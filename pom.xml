@@ -10,7 +10,7 @@
 
     <groupId>com.stefancooper.StefanMaven</groupId>
     <artifactId>StefansEnchantments</artifactId>
-    <version>0.0.2</version>
+    <version>0.0.4</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
