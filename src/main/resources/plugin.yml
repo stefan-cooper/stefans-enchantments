@@ -1,8 +1,11 @@
 name: StefanMaven
-version: 0.0.1
+version: 0.0.2
 author: Stefan Cooper
 main: com.stefancooper.StefanMaven.Main
 api-version: 1.14
 website: https://stefancooper.com
 commands:
   Magnet:
+    description: Gives Stone pickaxe with Magnet enchantment
+  AutoSmelt:
+    description: Gives Stone pickaxe with AutoSmelt enchantment

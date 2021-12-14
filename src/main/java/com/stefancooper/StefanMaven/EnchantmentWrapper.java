@@ -49,7 +49,11 @@ public class EnchantmentWrapper extends Enchantment {
 
     @Override
     public boolean conflictsWith(Enchantment enchantment) {
-        return false;
+        if (name.equalsIgnoreCase("autosmelt") && enchantment.getKey() == NamespacedKey.minecraft("SILK_TOUCH")) {
+            return true;
+        } else {
+            return false;
+        }
     }
 
     @Override

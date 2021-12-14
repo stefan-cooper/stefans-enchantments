@@ -1,34 +1,24 @@
 package com.stefancooper.StefanMaven;
 
-import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
-import org.bukkit.GameMode;
-import org.bukkit.Material;
+import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.Container;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
-import org.bukkit.enchantments.EnchantmentOffer;
-import org.bukkit.entity.Item;
+import org.bukkit.enchantments.EnchantmentWrapper;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.enchantment.EnchantItemEvent;
-import org.bukkit.event.enchantment.PrepareItemEnchantEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
-import org.bukkit.inventory.AnvilInventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.Random;
+import java.util.*;
 
-import static java.lang.Math.random;
 
 public final class Main extends JavaPlugin implements Listener { // Create the class and extend the JavaPlugin so we can implement internal methods.
     public void onEnable() { // This is called when the plugin is loaded into the server.
@@ -47,17 +37,22 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
             Player player = (Player) sender;
             ItemStack item = new ItemStack (Material.STONE_PICKAXE);
             item.addUnsafeEnchantment(Enchantment.DIG_SPEED, 4);
-            addMagnetToItem(item, true);
+            addCustomEnchantToItem(item, CustomEnchants.MAGNET, true);
             player.getInventory().addItem(item);
-
-            return true;
+        } else if (label.equalsIgnoreCase("autoSmelt")) {
+            if (!(sender instanceof Player)) return true;
+            Player player = (Player) sender;
+            ItemStack item = new ItemStack (Material.STONE_PICKAXE);
+            item.addUnsafeEnchantment(Enchantment.DIG_SPEED, 4);
+            addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, true);
+            player.getInventory().addItem(item);
         }
         return true;
     }
 
     @EventHandler()
     public void onBlockBreak(BlockBreakEvent event) {
-        if (HOLDING_MAGNET(event)) {
+        if (HOLDING_MAGNET(event) || HOLDING_AUTOSMELT(event)) {
             if (event.getPlayer().getInventory().getItemInMainHand() == null) return;
             if (!event.getPlayer().getInventory().getItemInMainHand().hasItemMeta()) return;
             if (event.getPlayer().getGameMode() == GameMode.CREATIVE) return;
@@ -68,22 +63,60 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
             event.setDropItems(false);
             Player player = event.getPlayer();
             Block block = event.getBlock();
+            Location location = event.getBlock().getLocation();
 
             Collection<ItemStack> drops = block.getDrops(player.getInventory().getItemInMainHand());
             if (drops.isEmpty()) return;
-            player.getInventory().addItem(drops.iterator().next());
+
+            if (HOLDING_AUTOSMELT(event)) {
+                for (ItemStack drop : drops) {
+                    Material dropped = drop.getType();
+                    if (HOLDING_MAGNET(event)) {
+                        player.getInventory().addItem(getSmeltedItem(dropped));
+                    } else {
+                        location.getWorld().dropItemNaturally(location, getSmeltedItem(dropped));
+                    }
+                }
+            } else {
+                player.getInventory().addItem(drops.iterator().next());
+            }
+        }
+    }
+
+    private ItemStack getSmeltedItem(Material dropped) {
+        if (dropped == Material.RAW_IRON) {
+            return new ItemStack(Material.IRON_INGOT);
+        } else if (dropped == Material.RAW_GOLD) {
+            return new ItemStack(Material.GOLD_INGOT);
+        } else if (dropped == Material.RAW_COPPER) {
+            return new ItemStack(Material.COPPER_INGOT);
+        } else if (dropped == Material.NETHERITE_SCRAP) {
+            return new ItemStack(Material.NETHERITE_INGOT);
+        } else {
+            return new ItemStack(dropped);
         }
     }
 
     @EventHandler()
     public void addCustomEnchantFromEnchantTable(EnchantItemEvent e) {
         Random rn = new Random();
+
+        // Adding Magnet
         if (e.getExpLevelCost() > 27 && isTool(e.getItem().getType()) && rn.nextInt(11) < 2) {
             ItemStack item = e.getItem();
-            addMagnetToItem(item, true);
+            addCustomEnchantToItem(item, CustomEnchants.MAGNET, true);
         } else if (e.getExpLevelCost() > 27 && isBook(e.getItem().getType()) && rn.nextInt(20) < 2) {
             ItemStack item = e.getItem();
-            addMagnetToItem(item, true);
+            addCustomEnchantToItem(item, CustomEnchants.MAGNET, true);
+        }
+
+        // Adding AutoSmelt
+        if (e.getExpLevelCost() > 27 && isPickaxe(e.getItem().getType()) && rn.nextInt(11) < 2 && !e.getItem().containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
+            ItemStack item = e.getItem();
+            addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, true);
+        } else if (e.getExpLevelCost() > 27 && isBook(e.getItem().getType()) && rn.nextInt(20) < 2 && !e.getItem().containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
+            ItemStack item = e.getItem();
+            addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, true);
         }
     }
 
@@ -91,23 +124,51 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
     public void addCustomEnchantFromAnvil(PrepareAnvilEvent e) {
         try {
             if( (e.getInventory().getContents().length > 0 && e.getInventory().getContents()[0] != null && e.getInventory().getContents()[0].getItemMeta().hasEnchant(CustomEnchants.MAGNET)) ||
-                (e.getInventory().getContents().length > 1 && e.getInventory().getContents()[1] != null && e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.MAGNET))) {
-                ItemStack item = e.getResult();
-                item.removeEnchantment(CustomEnchants.MAGNET);
-                addMagnetToItem(item, false);
-                e.setResult(item);
+                (e.getInventory().getContents().length > 1 && e.getInventory().getContents()[1] != null && e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.MAGNET)) ||
+                (e.getInventory().getContents().length > 0 && e.getInventory().getContents()[0] != null && e.getInventory().getContents()[0].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT)) ||
+                (e.getInventory().getContents().length > 1 && e.getInventory().getContents()[1] != null && e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT)))
+            {
+                boolean anvilInventoryFull = e.getInventory().getContents().length > 1
+                        && e.getInventory().getContents()[0] != null
+                        && e.getInventory().getContents()[1] != null;
+
+                if (anvilInventoryFull) {
+                    boolean hasAutoSmeltFirst = e.getInventory().getContents()[0].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT);
+                    boolean hasAutoSmeltSecond = e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT);
+                    boolean hasMagnetFirst = e.getInventory().getContents()[0].getItemMeta().hasEnchant(CustomEnchants.MAGNET);
+                    boolean hasMagnetSecond = e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.MAGNET);
+                    boolean hasAutoSmelt = hasAutoSmeltFirst || hasAutoSmeltSecond;
+                    boolean hasMagnet = hasMagnetFirst || hasMagnetSecond;
+
+                    ItemStack item = e.getResult();
+
+                    if (hasAutoSmelt && item.containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
+                        item.removeEnchantment(EnchantmentWrapper.SILK_TOUCH);
+                    } else if (hasAutoSmelt){
+                        item.removeEnchantment(CustomEnchants.AUTO_SMELT);
+                        addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, hasAutoSmeltSecond);
+                    }
+
+                    if (hasMagnet) {
+                        item.removeEnchantment(CustomEnchants.MAGNET);
+                        addCustomEnchantToItem(item, CustomEnchants.MAGNET, hasMagnetSecond);
+                    }
+                    e.setResult(item);
+                }
+
+
             }
         } catch (Exception x) {
             x.printStackTrace();
         }
     }
 
-    private void addMagnetToItem(ItemStack item, boolean withLore) {
-        item.addUnsafeEnchantment(CustomEnchants.MAGNET, 1);
+    private void addCustomEnchantToItem(ItemStack item, Enchantment customEnchant, boolean withLore) {
+        item.addUnsafeEnchantment(customEnchant, 1);
         if (withLore) {
             ItemMeta meta = item.getItemMeta();
             List<String> lore = new ArrayList<String>();
-            lore.add(ChatColor.GRAY + "Magnet");
+            lore.add(ChatColor.GRAY + customEnchant.getName());
             if (meta.hasLore()) {
                 for (String l : meta.getLore()) {
                     lore.add(l);
@@ -139,11 +200,24 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
                 || item.equals(Material.NETHERITE_AXE);
     }
 
+    private boolean isPickaxe(Material item) {
+        return item.equals(Material.WOODEN_PICKAXE)
+                || item.equals(Material.STONE_PICKAXE)
+                || item.equals(Material.IRON_PICKAXE)
+                || item.equals(Material.DIAMOND_PICKAXE)
+                || item.equals(Material.NETHERITE_PICKAXE)
+                || item.equals(Material.GOLDEN_PICKAXE);
+    }
+
     private boolean isBook(Material item){
         return item.equals(Material.BOOK);
     }
 
     private boolean HOLDING_MAGNET(BlockBreakEvent event) {
         return event.getPlayer().getInventory().getItemInMainHand().getItemMeta().hasEnchant(CustomEnchants.MAGNET);
+    }
+
+    private boolean HOLDING_AUTOSMELT(BlockBreakEvent event) {
+        return event.getPlayer().getInventory().getItemInMainHand().getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT);
     }
 }

@@ -9,8 +9,8 @@
     </build>
 
     <groupId>com.stefancooper.StefanMaven</groupId>
-    <artifactId>StefanMaven</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <artifactId>StefansEnchantments</artifactId>
+    <version>0.0.2</version>
 
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
