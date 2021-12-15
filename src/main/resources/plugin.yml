@@ -13,3 +13,7 @@ commands:
     description: Gives Stone pickaxe with AutoSmelt enchantment
     permission: yes
     permission-message: You must be OP!
+  ExplosiveBow:
+    description: Gives Bow with Explosive enchantment
+    permission: yes
+    permission-message: You must be OP!

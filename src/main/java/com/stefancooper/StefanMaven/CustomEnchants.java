@@ -10,13 +10,16 @@ import java.util.stream.Collectors;
 public class CustomEnchants {
     public static final Enchantment MAGNET = new EnchantmentWrapper("magnet", "Magnet", 1);
     public static final Enchantment AUTO_SMELT = new EnchantmentWrapper("autosmelt", "AutoSmelt", 1);
+    public static final Enchantment EXPLOSIVE = new EnchantmentWrapper("expolosive", "Explosive", 1);
 
     public static void register() {
         boolean magnetRegistered = Arrays.stream(Enchantment.values()).collect(Collectors.toList()).contains(CustomEnchants.MAGNET);
         boolean autoSmeltRegistered = Arrays.stream(Enchantment.values()).collect(Collectors.toList()).contains(CustomEnchants.AUTO_SMELT);
+        boolean explosiveRegistered = Arrays.stream(Enchantment.values()).collect(Collectors.toList()).contains(CustomEnchants.EXPLOSIVE);
 
         if (!magnetRegistered) registerEnchantment(MAGNET);
         if (!autoSmeltRegistered) registerEnchantment(AUTO_SMELT);
+        if (!explosiveRegistered) registerEnchantment(EXPLOSIVE);
     }
 
     public static void registerEnchantment(Enchantment enchantment) {

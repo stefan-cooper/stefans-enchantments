@@ -7,20 +7,25 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.enchantments.EnchantmentWrapper;
+import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.enchantment.EnchantItemEvent;
+import org.bukkit.event.entity.EntityDamageByEntityEvent;
+import org.bukkit.event.entity.EntityShootBowEvent;
+import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 import static com.stefancooper.StefanMaven.SmeltMap.getMappedSmeltedItem;
-
 
 public final class Main extends JavaPlugin implements Listener { // Create the class and extend the JavaPlugin so we can implement internal methods.
     public void onEnable() { // This is called when the plugin is loaded into the server.
@@ -47,6 +52,13 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
             ItemStack item = new ItemStack (Material.STONE_PICKAXE);
             item.addUnsafeEnchantment(Enchantment.DIG_SPEED, 4);
             addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, true);
+            player.getInventory().addItem(item);
+        } else if (label.equalsIgnoreCase("explosiveBow")) {
+            if (!(sender instanceof Player)) return true;
+            Player player = (Player) sender;
+            ItemStack item = new ItemStack (Material.BOW);
+            item.addUnsafeEnchantment(Enchantment.ARROW_INFINITE, 4);
+            addCustomEnchantToItem(item, CustomEnchants.EXPLOSIVE, true);
             player.getInventory().addItem(item);
         }
         return true;
@@ -126,48 +138,104 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
             ItemStack item = e.getItem();
             item.addEnchantment(EnchantmentWrapper.MENDING, 1);
         }
+
+        // Add Explosive Arrows
+        if (e.getExpLevelCost() == 30 && isBow(e.getItem().getType()) && rn.nextInt(21) < 2) {
+            ItemStack item = e.getItem();
+            addCustomEnchantToItem(item, CustomEnchants.EXPLOSIVE, true);
+        } else if (e.getExpLevelCost() == 30 && isBook(e.getItem().getType()) && rn.nextInt(41) < 2) {
+            ItemStack item = e.getItem();
+            addCustomEnchantToItem(item, CustomEnchants.EXPLOSIVE, true);
+        }
     }
 
     @EventHandler()
     public void addCustomEnchantFromAnvil(PrepareAnvilEvent e) {
         try {
-            if( (e.getInventory().getContents().length > 0 && e.getInventory().getContents()[0] != null && e.getInventory().getContents()[0].getItemMeta().hasEnchant(CustomEnchants.MAGNET)) ||
-                (e.getInventory().getContents().length > 1 && e.getInventory().getContents()[1] != null && e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.MAGNET)) ||
-                (e.getInventory().getContents().length > 0 && e.getInventory().getContents()[0] != null && e.getInventory().getContents()[0].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT)) ||
-                (e.getInventory().getContents().length > 1 && e.getInventory().getContents()[1] != null && e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT)))
-            {
-                boolean anvilInventoryFull = e.getInventory().getContents().length > 1
-                        && e.getInventory().getContents()[0] != null
-                        && e.getInventory().getContents()[1] != null;
+            boolean anvilInventoryFull = e.getInventory().getContents().length > 1
+                    && e.getInventory().getContents()[0] != null
+                    && e.getInventory().getContents()[1] != null;
 
-                if (anvilInventoryFull) {
-                    boolean hasAutoSmeltFirst = e.getInventory().getContents()[0].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT);
-                    boolean hasAutoSmeltSecond = e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT);
-                    boolean hasMagnetFirst = e.getInventory().getContents()[0].getItemMeta().hasEnchant(CustomEnchants.MAGNET);
-                    boolean hasMagnetSecond = e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.MAGNET);
-                    boolean hasAutoSmelt = hasAutoSmeltFirst || hasAutoSmeltSecond;
-                    boolean hasMagnet = hasMagnetFirst || hasMagnetSecond;
+            if (anvilInventoryFull) {
+                boolean leftItem = e.getInventory().getContents()[0].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT);
+                boolean rightItem = e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT);
+                boolean hasAutoSmelt = leftItem || rightItem;
 
-                    ItemStack item = e.getResult();
+                ItemStack item = e.getResult();
 
-                    if (hasAutoSmelt && item.containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
-                        item.removeEnchantment(EnchantmentWrapper.SILK_TOUCH);
-                    } else if (hasAutoSmelt){
-                        item.removeEnchantment(CustomEnchants.AUTO_SMELT);
-                        addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, hasAutoSmeltSecond);
-                    }
-
-                    if (hasMagnet) {
-                        item.removeEnchantment(CustomEnchants.MAGNET);
-                        addCustomEnchantToItem(item, CustomEnchants.MAGNET, hasMagnetSecond);
-                    }
-                    e.setResult(item);
+                if (hasAutoSmelt && item.containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
+                    item.removeEnchantment(EnchantmentWrapper.SILK_TOUCH);
+                } else if (hasAutoSmelt){
+                    item.removeEnchantment(CustomEnchants.AUTO_SMELT);
+                    addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, rightItem);
                 }
 
+                e.setResult(item);
+            }
+
+        } catch (Exception x) {
+            x.printStackTrace();
+        }
+    }
+
+    @EventHandler()
+    public void addMagnetEnchantFromAnvil(PrepareAnvilEvent e) {
+        try {
+            boolean anvilInventoryFull = e.getInventory().getContents().length > 1
+                    && e.getInventory().getContents()[0] != null
+                    && e.getInventory().getContents()[1] != null;
+
+            if (anvilInventoryFull) {
+                ItemStack item = e.getResult();
+                ItemStack leftItem = e.getInventory().getContents()[0];
+                ItemStack rightItem = e.getInventory().getContents()[1];
+
+                if (leftItem.getItemMeta().hasEnchant(CustomEnchants.MAGNET) ||
+                        rightItem.getItemMeta().hasEnchant(CustomEnchants.MAGNET)) {
+                    item.removeEnchantment(CustomEnchants.MAGNET);
+                    addCustomEnchantToItem(item, CustomEnchants.MAGNET, rightItem.getItemMeta().hasEnchant(CustomEnchants.MAGNET));
+                }
+                e.setResult(item);
 
             }
         } catch (Exception x) {
             x.printStackTrace();
+        }
+    }
+
+    @EventHandler()
+    public void addExplosiveEnchantFromAnvil(PrepareAnvilEvent e) {
+        try {
+            boolean anvilInventoryFull = e.getInventory().getContents().length > 1
+                    && e.getInventory().getContents()[0] != null
+                    && e.getInventory().getContents()[1] != null;
+
+            if (anvilInventoryFull) {
+                ItemStack item = e.getResult();
+                ItemStack leftItem = e.getInventory().getContents()[0];
+                ItemStack rightItem = e.getInventory().getContents()[1];
+
+                if (leftItem.getItemMeta().hasEnchant(CustomEnchants.EXPLOSIVE) ||
+                    rightItem.getItemMeta().hasEnchant(CustomEnchants.EXPLOSIVE)) {
+                    item.removeEnchantment(CustomEnchants.EXPLOSIVE);
+                    addCustomEnchantToItem(item, CustomEnchants.EXPLOSIVE, rightItem.getItemMeta().hasEnchant(CustomEnchants.EXPLOSIVE));
+                }
+                e.setResult(item);
+
+            }
+        } catch (Exception x) {
+            x.printStackTrace();
+        }
+    }
+
+    @EventHandler()
+    public void explodeArrow(EntityDamageByEntityEvent e) throws InterruptedException {
+        if (e.getDamager() instanceof Projectile && ((Projectile) e.getDamager()).getShooter() instanceof Player) {
+            Player player = ((Player) ((Projectile) e.getDamager()).getShooter()).getPlayer();
+            if (player.getInventory().getItemInMainHand().getItemMeta().hasEnchant(CustomEnchants.EXPLOSIVE)) {
+                Location location = (Location) e.getDamager().getLocation();
+                location.getWorld().createExplosion(location, 3, false);
+            }
         }
     }
 
@@ -219,6 +287,10 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
 
     private boolean isBook(Material item){
         return item.equals(Material.BOOK);
+    }
+
+    private boolean isBow(Material item){
+        return item.equals(Material.BOW);
     }
 
     private boolean HOLDING_MAGNET(BlockBreakEvent event) {

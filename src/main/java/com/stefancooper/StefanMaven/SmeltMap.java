@@ -20,6 +20,7 @@ public class SmeltMap {
         smeltMap.put(Material.OAK_LOG, Material.CHARCOAL);
         smeltMap.put(Material.SPRUCE_LOG, Material.CHARCOAL);
         smeltMap.put(Material.SAND, Material.GLASS);
+        smeltMap.put(Material.RED_SAND, Material.GLASS);
         smeltMap.put(Material.CLAY, Material.TERRACOTTA);
         smeltMap.put(Material.NETHERRACK, Material.NETHER_BRICK);
         smeltMap.put(Material.CACTUS, Material.GREEN_DYE);
