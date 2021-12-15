@@ -1,5 +1,5 @@
 name: StefanMaven
-version: 0.0.7
+version: 0.0.8
 author: Stefan Cooper
 main: com.stefancooper.StefanMaven.Main
 api-version: 1.14
@@ -24,10 +24,13 @@ commands:
   HunterCompass:
     description: Compass pointing at player
     usage: /hunterCompass [targetPlayer]
+  BigBrainMining:
+    description: Get more XP from mining ores ( This command gives you a Stone Pickaxe to try it out )
+    permission: yes
+    permission-message: You must be OP!
 
 #    Future Work:
 #       - Lucky Farmer: (Hoes) Fortune for farming (levelled 1-3)
-#       - Big Brain Mining: (Pickaxes) Get more Xp (levelled 1-5)
 #       - Night Light: (Helmets) Night vision all the time (not levelled)
 #       - Hot Hands: (Armour) Small chance of setting attacking enemy on fire (levelled 1-3)
 #       - Bad Omen: (Swords) Chance to give wither to enemy (levelled 1-5)

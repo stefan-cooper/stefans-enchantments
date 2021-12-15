@@ -89,6 +89,13 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
             item.setItemMeta(meta);
             player.getInventory().addItem(item);
             player.setCompassTarget(target.getLocation());
+        } else if (label.equalsIgnoreCase("bigBrainMining")) {
+            if (!(sender instanceof Player)) return true;
+            Player player = (Player) sender;
+            ItemStack item = new ItemStack (Material.STONE_PICKAXE);
+            item.addUnsafeEnchantment(Enchantment.DIG_SPEED, 4);
+            addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, 5);
+            player.getInventory().addItem(item);
         }
         return true;
     }
@@ -160,49 +167,93 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
     }
 
     @EventHandler()
+    public void extraXPFromMining(BlockBreakEvent event) {
+        Block block = event.getBlock();
+        Player player = event.getPlayer();
+        Location location = event.getBlock().getLocation();
+
+        if (event.getPlayer().getInventory().getItemInMainHand() == null) return;
+        if (!event.getPlayer().getInventory().getItemInMainHand().hasItemMeta()) return;
+        if (event.getPlayer().getGameMode() == GameMode.CREATIVE) return;
+        if (event.getPlayer().getGameMode() == GameMode.SPECTATOR) return;
+
+        Collection<ItemStack> drops = block.getDrops(player.getInventory().getItemInMainHand());
+        if (drops.isEmpty()) return;
+
+        if (HOLDING_BIG_BRAIN_MINING(event)) {
+            int enchantLevel = event.getPlayer().getInventory().getItemInMainHand().getItemMeta().getEnchantLevel(CustomEnchants.BIG_BRAIN_MINING);
+            if (enchantLevel == 5) {
+                event.setExpToDrop((event.getExpToDrop() + 1) * 17);
+            } else if (enchantLevel == 4) {
+                event.setExpToDrop((event.getExpToDrop() + 1) * 12);
+            } else if (enchantLevel == 3) {
+                event.setExpToDrop((event.getExpToDrop() + 1) * 8);
+            } else if (enchantLevel == 2) {
+                event.setExpToDrop((event.getExpToDrop() + 1) * 4);
+            } else if (enchantLevel == 1) {
+                event.setExpToDrop((event.getExpToDrop() + 1) * 2);
+            }
+        }
+
+    }
+
+    @EventHandler()
     public void addCustomEnchantFromEnchantTable(EnchantItemEvent e) {
         Random rn = new Random();
 
-        // Adding Magnet
-        if (e.getExpLevelCost() > 27 && isTool(e.getItem().getType()) && rn.nextInt(11) < 2) {
-            ItemStack item = e.getItem();
+        ItemStack item = e.getItem();
+        boolean isBook = isBook(e.getItem().getType());
+
+        // Add Magnet
+        if (e.getExpLevelCost() > 27 && isTool(item.getType()) && rn.nextInt(11) < 2) {
             addCustomEnchantToItem(item, CustomEnchants.MAGNET, true, 0);
-        } else if (e.getExpLevelCost() > 27 && isBook(e.getItem().getType()) && rn.nextInt(20) < 2) {
-            ItemStack item = e.getItem();
+        } else if (e.getExpLevelCost() > 27 && isBook && rn.nextInt(20) < 2) {
             addCustomEnchantToItem(item, CustomEnchants.MAGNET, true, 0);
         }
 
-        // Adding AutoSmelt
-        if (e.getExpLevelCost() > 27 && isPickaxe(e.getItem().getType()) && rn.nextInt(11) < 2 && !e.getItem().containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
-            ItemStack item = e.getItem();
+        // Add AutoSmelt
+        if (e.getExpLevelCost() > 27 && isPickaxe(item.getType()) && rn.nextInt(11) < 2 && !item.containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
             addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, true, 0);
-        } else if (e.getExpLevelCost() > 27 && isBook(e.getItem().getType()) && rn.nextInt(20) < 2 && !e.getItem().containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
-            ItemStack item = e.getItem();
+        } else if (e.getExpLevelCost() > 27 && isBook && rn.nextInt(20) < 2 && !item.containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
             addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, true, 0);
         }
 
         // Make mending possible
         if (e.getExpLevelCost() == 30 && rn.nextInt(51) < 2) {
-            ItemStack item = e.getItem();
             item.addEnchantment(EnchantmentWrapper.MENDING, 1);
         }
 
         // Add Explosive Arrows
-        if (e.getExpLevelCost() == 30 && isBow(e.getItem().getType()) && rn.nextInt(21) < 2) {
-            ItemStack item = e.getItem();
+        if (e.getExpLevelCost() == 30 && isBow(item.getType()) && rn.nextInt(21) < 2) {
             addCustomEnchantToItem(item, CustomEnchants.EXPLOSIVE, true, 0);
-        } else if (e.getExpLevelCost() == 30 && isBook(e.getItem().getType()) && rn.nextInt(41) < 2) {
-            ItemStack item = e.getItem();
+        } else if (e.getExpLevelCost() == 30 && isBook && rn.nextInt(41) < 2) {
             addCustomEnchantToItem(item, CustomEnchants.EXPLOSIVE, true, 0);
         }
 
         // Add Swift Planter
-        if (e.getExpLevelCost() == 24 && isHoe(e.getItem().getType()) && rn.nextInt(11) < 2) {
-            ItemStack item = e.getItem();
+        if (e.getExpLevelCost() == 24 && isHoe(item.getType()) && rn.nextInt(11) < 2) {
             addCustomEnchantToItem(item, CustomEnchants.SWIFT_PLANTER, true, 0);
-        } else if (e.getExpLevelCost() == 30 && isBook(e.getItem().getType()) && rn.nextInt(31) < 2) {
-            ItemStack item = e.getItem();
+        } else if (e.getExpLevelCost() == 30 && isBook && rn.nextInt(31) < 2) {
             addCustomEnchantToItem(item, CustomEnchants.SWIFT_PLANTER, true, 0);
+        }
+
+        // Add Big Brain Mining
+        if (e.getExpLevelCost() == 30 && isPickaxe(item.getType()) && rn.nextInt(51) < 2 ) {
+            addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, 4);
+        } else if (e.getExpLevelCost() > 27 && isPickaxe(item.getType()) && rn.nextInt(31) < 2 ) {
+            addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, 3);
+        } else if (e.getExpLevelCost() > 20 && isPickaxe(item.getType()) && rn.nextInt(31) < 2 ) {
+            addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, 2);
+        } else if (e.getExpLevelCost() < 20 && isPickaxe(item.getType()) && rn.nextInt(11) < 2 ) {
+            addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, 1);
+        } else if (e.getExpLevelCost() == 30 && isBook && rn.nextInt(101) < 2) {
+            addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, 4);
+        } else if (e.getExpLevelCost() > 20 && isBook && rn.nextInt(81) < 2) {
+            addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, 3);
+        } else if (e.getExpLevelCost() < 20 && isBook && rn.nextInt(21) < 2) {
+            addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, 2);
+        } else if (e.getExpLevelCost() < 20 && isBook && rn.nextInt(11) < 2) {
+            addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, 1);
         }
     }
 
@@ -310,6 +361,41 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
     }
 
     @EventHandler()
+    public void addBigBrainMiningEnchantFromAnvil(PrepareAnvilEvent e) {
+        try {
+            boolean anvilInventoryFull = e.getInventory().getContents().length > 1
+                    && e.getInventory().getContents()[0] != null
+                    && e.getInventory().getContents()[1] != null;
+
+            if (anvilInventoryFull) {
+                ItemStack item = e.getResult();
+                ItemStack leftItem = e.getInventory().getContents()[0];
+                ItemStack rightItem = e.getInventory().getContents()[1];
+
+                boolean leftItemEnchanted = leftItem.getItemMeta().hasEnchant(CustomEnchants.BIG_BRAIN_MINING);
+                boolean rightItemEnchanted = rightItem.getItemMeta().hasEnchant(CustomEnchants.BIG_BRAIN_MINING);
+                int max = CustomEnchants.BIG_BRAIN_MINING.getMaxLevel();
+
+                if (leftItemEnchanted && rightItemEnchanted) {
+                    int incr = Math.min(Math.min(leftItem.getItemMeta().getEnchantLevel(CustomEnchants.BIG_BRAIN_MINING), rightItem.getItemMeta().getEnchantLevel(CustomEnchants.BIG_BRAIN_MINING)) + 1, max);
+                    item.removeEnchantment(CustomEnchants.BIG_BRAIN_MINING);
+                    if (incr != max) removeFromLore(item, (ChatColor.GRAY + CustomEnchants.BIG_BRAIN_MINING.getName() + levelMapForLore(incr - 1)));
+                    addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, incr);
+                } else if (leftItemEnchanted || rightItemEnchanted) {
+                    int enchantLevel;
+                    if (leftItemEnchanted) enchantLevel = leftItem.getItemMeta().getEnchantLevel(CustomEnchants.BIG_BRAIN_MINING);
+                    else enchantLevel = rightItem.getItemMeta().getEnchantLevel(CustomEnchants.BIG_BRAIN_MINING);
+                    item.removeEnchantment(CustomEnchants.BIG_BRAIN_MINING);
+                    addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, rightItemEnchanted, enchantLevel);
+                }
+                e.setResult(item);
+            }
+        } catch (Exception x) {
+            x.printStackTrace();
+        }
+    }
+
+    @EventHandler()
     public void explodeArrow(EntityDamageByEntityEvent e) throws InterruptedException {
         if (e.getDamager() instanceof Projectile && ((Projectile) e.getDamager()).getShooter() instanceof Player) {
             Player player = ((Player) ((Projectile) e.getDamager()).getShooter()).getPlayer();
@@ -338,6 +424,26 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
             meta.setLore(lore);
             item.setItemMeta(meta);
         }
+    }
+
+    private void addToItemLore(ItemStack item, String newLore) {
+        ItemMeta meta = item.getItemMeta();
+        List<String> lore = new ArrayList<String>();
+        lore.add(ChatColor.GRAY + newLore);
+        if (meta.hasLore()) {
+            for (String l : meta.getLore()) {
+                lore.add(l);
+            }
+        }
+        meta.setLore(lore);
+        item.setItemMeta(meta);
+    }
+
+    private void removeFromLore(ItemStack item, String oldLore) {
+        List<String> lore = item.getItemMeta().getLore();
+        Bukkit.getConsoleSender().sendMessage("old: " + lore.toString());
+        lore.remove(oldLore);
+        Bukkit.getConsoleSender().sendMessage("new: " + lore.toString());
     }
 
     private String levelMapForLore(int level) {
@@ -410,6 +516,10 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
 
     private boolean HOLDING_AUTOSMELT(BlockBreakEvent event) {
         return event.getPlayer().getInventory().getItemInMainHand().getItemMeta() != null && event.getPlayer().getInventory().getItemInMainHand().getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT);
+    }
+
+    private boolean HOLDING_BIG_BRAIN_MINING(BlockBreakEvent event) {
+        return event.getPlayer().getInventory().getItemInMainHand().getItemMeta() != null && event.getPlayer().getInventory().getItemInMainHand().getItemMeta().hasEnchant(CustomEnchants.BIG_BRAIN_MINING);
     }
 
     private boolean HOLDING_SWIFT_PLANTER(BlockBreakEvent event) {
