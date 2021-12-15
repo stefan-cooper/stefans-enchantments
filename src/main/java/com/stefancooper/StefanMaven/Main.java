@@ -20,6 +20,7 @@ import org.bukkit.event.entity.EntityShootBowEvent;
 import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.CompassMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
@@ -67,6 +68,27 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
             ItemStack item = new ItemStack (Material.STONE_HOE);
             addCustomEnchantToItem(item, CustomEnchants.SWIFT_PLANTER, true, 0);
             player.getInventory().addItem(item);
+        } else if (label.equalsIgnoreCase("hunterCompass")) {
+            if (!(sender instanceof Player)) return true;
+            Player target = Bukkit.getPlayer(args[0]);
+            Player player = (Player) sender;
+            if (target == null) {
+                player.sendMessage("Player not found, ensure usage is " + ChatColor.YELLOW + "/hunterCompass [targetPlayer]");
+                return true;
+            }
+            ItemStack item = new ItemStack (Material.COMPASS);
+            ItemMeta meta = item.getItemMeta();
+            List<String> lore = new ArrayList<String>();
+            lore.add(ChatColor.RED + "Pointing at " + target.getName());
+            if (meta.hasLore()) {
+                for (String l : meta.getLore()) {
+                    lore.add(l);
+                }
+            }
+            meta.setLore(lore);
+            item.setItemMeta(meta);
+            player.getInventory().addItem(item);
+            player.setCompassTarget(target.getLocation());
         }
         return true;
     }

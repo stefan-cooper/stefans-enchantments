@@ -1,5 +1,5 @@
 name: StefanMaven
-version: 0.0.6
+version: 0.0.7
 author: Stefan Cooper
 main: com.stefancooper.StefanMaven.Main
 api-version: 1.14
@@ -21,6 +21,9 @@ commands:
     description: Replant harvested crops automatically ( This command gives you a Stone Hoe to try it out )
     permission: yes
     permission-message: You must be OP!
+  HunterCompass:
+    description: Compass pointing at player
+    usage: /hunterCompass [targetPlayer]
 
 #    Future Work:
 #       - Lucky Farmer: (Hoes) Fortune for farming (levelled 1-3)
