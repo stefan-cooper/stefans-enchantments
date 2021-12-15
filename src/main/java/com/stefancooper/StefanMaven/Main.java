@@ -19,6 +19,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
 
+import static com.stefancooper.StefanMaven.SmeltMap.getMappedSmeltedItem;
+
 
 public final class Main extends JavaPlugin implements Listener { // Create the class and extend the JavaPlugin so we can implement internal methods.
     public void onEnable() { // This is called when the plugin is loaded into the server.
@@ -55,6 +57,7 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
         if (HOLDING_MAGNET(event) || HOLDING_AUTOSMELT(event)) {
             Block block = event.getBlock();
             Player player = event.getPlayer();
+            Location location = event.getBlock().getLocation();
 
             if (event.getPlayer().getInventory().getItemInMainHand() == null) return;
             if (!event.getPlayer().getInventory().getItemInMainHand().hasItemMeta()) return;
@@ -65,18 +68,18 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
                 for (ItemStack item : event.getPlayer().getInventory()) {
                     Collection<ItemStack> drops = block.getDrops(player.getInventory().getItemInMainHand());
                     ItemStack drop = drops.iterator().next();
+                    if (HOLDING_AUTOSMELT(event)) drop = getMappedSmeltedItem(drop.getType());
                     if (item != null && drop.getType() == item.getType() && item.getAmount() < item.getMaxStackSize()) {
                         spaceAvailable = true;
                         break;
                     }
                 }
-                if(!spaceAvailable) return;
+                if (HOLDING_AUTOSMELT(event) && !spaceAvailable) location.getWorld().dropItemNaturally(location, getMappedSmeltedItem(block.getType()));
+                else if (!spaceAvailable) return;
             }
             if (event.getBlock().getState() instanceof Container) return;
 
             event.setDropItems(false);
-
-            Location location = event.getBlock().getLocation();
 
             Collection<ItemStack> drops = block.getDrops(player.getInventory().getItemInMainHand());
             if (drops.isEmpty()) return;
@@ -85,28 +88,14 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
                 for (ItemStack drop : drops) {
                     Material dropped = drop.getType();
                     if (HOLDING_MAGNET(event)) {
-                        player.getInventory().addItem(getSmeltedItem(dropped));
+                        player.getInventory().addItem(getMappedSmeltedItem(dropped));
                     } else {
-                        location.getWorld().dropItemNaturally(location, getSmeltedItem(dropped));
+                        location.getWorld().dropItemNaturally(location, getMappedSmeltedItem(dropped));
                     }
                 }
             } else {
                 player.getInventory().addItem(drops.iterator().next());
             }
-        }
-    }
-
-    private ItemStack getSmeltedItem(Material dropped) {
-        if (dropped == Material.RAW_IRON) {
-            return new ItemStack(Material.IRON_INGOT);
-        } else if (dropped == Material.RAW_GOLD) {
-            return new ItemStack(Material.GOLD_INGOT);
-        } else if (dropped == Material.RAW_COPPER) {
-            return new ItemStack(Material.COPPER_INGOT);
-        } else if (dropped == Material.NETHERITE_SCRAP) {
-            return new ItemStack(Material.NETHERITE_INGOT);
-        } else {
-            return new ItemStack(dropped);
         }
     }
 
