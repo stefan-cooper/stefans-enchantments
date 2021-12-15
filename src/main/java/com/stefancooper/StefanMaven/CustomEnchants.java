@@ -10,16 +10,19 @@ import java.util.stream.Collectors;
 public class CustomEnchants {
     public static final Enchantment MAGNET = new EnchantmentWrapper("magnet", "Magnet", 1);
     public static final Enchantment AUTO_SMELT = new EnchantmentWrapper("autosmelt", "AutoSmelt", 1);
-    public static final Enchantment EXPLOSIVE = new EnchantmentWrapper("expolosive", "Explosive", 1);
+    public static final Enchantment EXPLOSIVE = new EnchantmentWrapper("explosive", "Explosive", 1);
+    public static final Enchantment SWIFT_PLANTER = new EnchantmentWrapper("swift_planter", "Swift Planter", 1);
 
     public static void register() {
         boolean magnetRegistered = Arrays.stream(Enchantment.values()).collect(Collectors.toList()).contains(CustomEnchants.MAGNET);
         boolean autoSmeltRegistered = Arrays.stream(Enchantment.values()).collect(Collectors.toList()).contains(CustomEnchants.AUTO_SMELT);
         boolean explosiveRegistered = Arrays.stream(Enchantment.values()).collect(Collectors.toList()).contains(CustomEnchants.EXPLOSIVE);
+        boolean swiftPlantingRegistered = Arrays.stream(Enchantment.values()).collect(Collectors.toList()).contains(CustomEnchants.SWIFT_PLANTER);
 
         if (!magnetRegistered) registerEnchantment(MAGNET);
         if (!autoSmeltRegistered) registerEnchantment(AUTO_SMELT);
         if (!explosiveRegistered) registerEnchantment(EXPLOSIVE);
+        if (!swiftPlantingRegistered) registerEnchantment(SWIFT_PLANTER);
     }
 
     public static void registerEnchantment(Enchantment enchantment) {
