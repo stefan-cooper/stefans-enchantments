@@ -258,36 +258,16 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
     }
 
     @EventHandler()
-    public void addAutoSmeltFromAnvil(PrepareAnvilEvent e) {
-        try {
-            boolean anvilInventoryFull = e.getInventory().getContents().length > 1
-                    && e.getInventory().getContents()[0] != null
-                    && e.getInventory().getContents()[1] != null;
-
-            if (anvilInventoryFull) {
-                boolean leftItem = e.getInventory().getContents()[0].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT);
-                boolean rightItem = e.getInventory().getContents()[1].getItemMeta().hasEnchant(CustomEnchants.AUTO_SMELT);
-                boolean hasAutoSmelt = leftItem || rightItem;
-
-                ItemStack item = e.getResult();
-
-                if (hasAutoSmelt && item.containsEnchantment(EnchantmentWrapper.SILK_TOUCH)) {
-                    item.removeEnchantment(EnchantmentWrapper.SILK_TOUCH);
-                } else if (hasAutoSmelt){
-                    item.removeEnchantment(CustomEnchants.AUTO_SMELT);
-                    addCustomEnchantToItem(item, CustomEnchants.AUTO_SMELT, rightItem, 0);
-                }
-
-                e.setResult(item);
-            }
-
-        } catch (Exception x) {
-            x.printStackTrace();
-        }
+    public void handleAnvils(PrepareAnvilEvent e) {
+        List<Enchantment> noConflicts = new ArrayList<>();
+        handleAnvilEnchantment(e, CustomEnchants.BIG_BRAIN_MINING, true, noConflicts );
+        handleAnvilEnchantment(e, CustomEnchants.SWIFT_PLANTER, false, noConflicts);
+        handleAnvilEnchantment(e, CustomEnchants.MAGNET, false, noConflicts);
+        handleAnvilEnchantment(e, CustomEnchants.AUTO_SMELT, false, new ArrayList<Enchantment>(Arrays.asList(EnchantmentWrapper.SILK_TOUCH)));
+        handleAnvilEnchantment(e, CustomEnchants.EXPLOSIVE, false, noConflicts);
     }
 
-    @EventHandler()
-    public void addMagnetEnchantFromAnvil(PrepareAnvilEvent e) {
+    private void handleAnvilEnchantment(PrepareAnvilEvent e, Enchantment enchantment, boolean withLevels, List<Enchantment> conflicts) {
         try {
             boolean anvilInventoryFull = e.getInventory().getContents().length > 1
                     && e.getInventory().getContents()[0] != null
@@ -298,96 +278,50 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
                 ItemStack leftItem = e.getInventory().getContents()[0];
                 ItemStack rightItem = e.getInventory().getContents()[1];
 
-                if (leftItem.getItemMeta().hasEnchant(CustomEnchants.MAGNET) ||
-                        rightItem.getItemMeta().hasEnchant(CustomEnchants.MAGNET)) {
-                    item.removeEnchantment(CustomEnchants.MAGNET);
-                    addCustomEnchantToItem(item, CustomEnchants.MAGNET, rightItem.getItemMeta().hasEnchant(CustomEnchants.MAGNET), 0);
-                }
-                e.setResult(item);
+                boolean leftItemEnchanted = leftItem.getItemMeta().hasEnchant(enchantment);
+                boolean rightItemEnchanted = rightItem.getItemMeta().hasEnchant(enchantment);
+                int enchantLevel = 0;
 
-            }
-        } catch (Exception x) {
-            x.printStackTrace();
-        }
-    }
-
-    @EventHandler()
-    public void addExplosiveEnchantFromAnvil(PrepareAnvilEvent e) {
-        try {
-            boolean anvilInventoryFull = e.getInventory().getContents().length > 1
-                    && e.getInventory().getContents()[0] != null
-                    && e.getInventory().getContents()[1] != null;
-
-            if (anvilInventoryFull) {
-                ItemStack item = e.getResult();
-                ItemStack leftItem = e.getInventory().getContents()[0];
-                ItemStack rightItem = e.getInventory().getContents()[1];
-
-                if (leftItem.getItemMeta().hasEnchant(CustomEnchants.EXPLOSIVE) ||
-                    rightItem.getItemMeta().hasEnchant(CustomEnchants.EXPLOSIVE)) {
-                    item.removeEnchantment(CustomEnchants.EXPLOSIVE);
-                    addCustomEnchantToItem(item, CustomEnchants.EXPLOSIVE, rightItem.getItemMeta().hasEnchant(CustomEnchants.EXPLOSIVE), 0);
-                }
-                e.setResult(item);
-
-            }
-        } catch (Exception x) {
-            x.printStackTrace();
-        }
-    }
-
-    @EventHandler()
-    public void addSwiftPlanterEnchantFromAnvil(PrepareAnvilEvent e) {
-        try {
-            boolean anvilInventoryFull = e.getInventory().getContents().length > 1
-                    && e.getInventory().getContents()[0] != null
-                    && e.getInventory().getContents()[1] != null;
-
-            if (anvilInventoryFull) {
-                ItemStack item = e.getResult();
-                ItemStack leftItem = e.getInventory().getContents()[0];
-                ItemStack rightItem = e.getInventory().getContents()[1];
-
-                if (leftItem.getItemMeta().hasEnchant(CustomEnchants.SWIFT_PLANTER) ||
-                        rightItem.getItemMeta().hasEnchant(CustomEnchants.SWIFT_PLANTER)) {
-                    item.removeEnchantment(CustomEnchants.SWIFT_PLANTER);
-                    addCustomEnchantToItem(item, CustomEnchants.SWIFT_PLANTER, rightItem.getItemMeta().hasEnchant(CustomEnchants.SWIFT_PLANTER), 0);
-                }
-                e.setResult(item);
-            }
-        } catch (Exception x) {
-            x.printStackTrace();
-        }
-    }
-
-    @EventHandler()
-    public void addBigBrainMiningEnchantFromAnvil(PrepareAnvilEvent e) {
-        try {
-            boolean anvilInventoryFull = e.getInventory().getContents().length > 1
-                    && e.getInventory().getContents()[0] != null
-                    && e.getInventory().getContents()[1] != null;
-
-            if (anvilInventoryFull) {
-                ItemStack item = e.getResult();
-                ItemStack leftItem = e.getInventory().getContents()[0];
-                ItemStack rightItem = e.getInventory().getContents()[1];
-
-                boolean leftItemEnchanted = leftItem.getItemMeta().hasEnchant(CustomEnchants.BIG_BRAIN_MINING);
-                boolean rightItemEnchanted = rightItem.getItemMeta().hasEnchant(CustomEnchants.BIG_BRAIN_MINING);
-                int max = CustomEnchants.BIG_BRAIN_MINING.getMaxLevel();
-
+                // Upgrading Enchantment
                 if (leftItemEnchanted && rightItemEnchanted) {
-                    int incr = Math.min(Math.min(leftItem.getItemMeta().getEnchantLevel(CustomEnchants.BIG_BRAIN_MINING), rightItem.getItemMeta().getEnchantLevel(CustomEnchants.BIG_BRAIN_MINING)) + 1, max);
-                    item.removeEnchantment(CustomEnchants.BIG_BRAIN_MINING);
-                    if (incr != max) removeFromLore(item, (ChatColor.GRAY + CustomEnchants.BIG_BRAIN_MINING.getName() + levelMapForLore(incr - 1)));
-                    addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, true, incr);
+                    if (withLevels) {
+                        int max = enchantment.getMaxLevel();
+                        int leftLevel = leftItem.getItemMeta().getEnchantLevel(enchantment);
+                        int rightLevel = rightItem.getItemMeta().getEnchantLevel(enchantment);
+                        enchantLevel = Math.min(Math.min(leftLevel, rightLevel) + 1, max);
+                        if (leftLevel == rightLevel) removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(enchantLevel - 1)));
+                        else if (rightLevel < leftLevel) removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(enchantLevel)));
+                        else if (leftLevel < rightLevel) removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(leftLevel)));
+                    } else {
+                        removeFromLore(item, (ChatColor.GRAY + enchantment.getName()));
+                    }
+                    item.removeEnchantment(enchantment);
+                    addCustomEnchantToItem(item, enchantment, true, enchantLevel);
+
+                // Adding enchantment to item
                 } else if (leftItemEnchanted || rightItemEnchanted) {
-                    int enchantLevel;
-                    if (leftItemEnchanted) enchantLevel = leftItem.getItemMeta().getEnchantLevel(CustomEnchants.BIG_BRAIN_MINING);
-                    else enchantLevel = rightItem.getItemMeta().getEnchantLevel(CustomEnchants.BIG_BRAIN_MINING);
-                    item.removeEnchantment(CustomEnchants.BIG_BRAIN_MINING);
-                    addCustomEnchantToItem(item, CustomEnchants.BIG_BRAIN_MINING, rightItemEnchanted, enchantLevel);
+                    if (withLevels) {
+                        if (leftItemEnchanted) enchantLevel = leftItem.getItemMeta().getEnchantLevel(enchantment);
+                        else enchantLevel = rightItem.getItemMeta().getEnchantLevel(enchantment);
+                    }
+                    item.removeEnchantment(enchantment);
+                    addCustomEnchantToItem(item, enchantment, rightItemEnchanted, enchantLevel);
                 }
+
+                // Handle Conflicting Enchantments
+                for (Enchantment conflict : conflicts) {
+                    if (leftItem.getItemMeta().hasEnchant(enchantment) && rightItem.getItemMeta().hasEnchant(conflict)) {
+                        item.removeEnchantment(conflict);
+                    } else if (leftItem.getItemMeta().hasEnchant(conflict) && rightItem.getItemMeta().hasEnchant(enchantment)) {
+                        item.removeEnchantment(enchantment);
+                        if (withLevels) {
+                            removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(enchantLevel)));
+                        } else {
+                            removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " "));
+                        }
+                    }
+                }
+
                 e.setResult(item);
             }
         } catch (Exception x) {
@@ -440,10 +374,14 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
     }
 
     private void removeFromLore(ItemStack item, String oldLore) {
+        ItemMeta meta = item.getItemMeta();
         List<String> lore = item.getItemMeta().getLore();
-        Bukkit.getConsoleSender().sendMessage("old: " + lore.toString());
+        Bukkit.getConsoleSender().sendMessage("old: " + lore.toString() + " vs " + oldLore);
+
         lore.remove(oldLore);
         Bukkit.getConsoleSender().sendMessage("new: " + lore.toString());
+        meta.setLore(lore);
+        item.setItemMeta(meta);
     }
 
     private String levelMapForLore(int level) {
