@@ -7,7 +7,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class SmeltMap {
-    public static Map<Material, Material> getSmeltMap() {
+    private static Map<Material, Material> getSmeltMap() {
         Map<Material, Material> smeltMap = new HashMap<>();
         smeltMap.put(Material.RAW_IRON, Material.IRON_INGOT);
         smeltMap.put(Material.RAW_GOLD, Material.GOLD_INGOT);

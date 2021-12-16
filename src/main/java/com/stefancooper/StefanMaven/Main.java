@@ -8,7 +8,6 @@ import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.enchantments.EnchantmentWrapper;
-import org.bukkit.entity.Arrow;
 import org.bukkit.entity.Player;
 import org.bukkit.entity.Projectile;
 import org.bukkit.event.EventHandler;
@@ -16,16 +15,12 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.enchantment.EnchantItemEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityShootBowEvent;
-import org.bukkit.event.entity.ProjectileHitEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.CompassMeta;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 import static com.stefancooper.StefanMaven.SmeltMap.getMappedSmeltedItem;
 
@@ -107,11 +102,11 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
             Player player = event.getPlayer();
             Location location = event.getBlock().getLocation();
 
-            if (event.getPlayer().getInventory().getItemInMainHand() == null) return;
-            if (!event.getPlayer().getInventory().getItemInMainHand().hasItemMeta()) return;
-            if (event.getPlayer().getGameMode() == GameMode.CREATIVE) return;
-            if (event.getPlayer().getGameMode() == GameMode.SPECTATOR) return;
-            if (event.getPlayer().getInventory().firstEmpty() == -1) {
+            if (HAS_EMPTY_HAND(event.getPlayer())) return;
+            if (HAS_UNENCHANTED_ITEM(event.getPlayer())) return;
+            if (IS_CREATIVE(event.getPlayer())) return;
+            if (IS_SPECTATOR(event.getPlayer())) return;
+            if (HAS_FULL_INVENTORY(event.getPlayer())) {
                 boolean spaceAvailable = false;
                 for (ItemStack item : event.getPlayer().getInventory()) {
                     Collection<ItemStack> drops = block.getDrops(player.getInventory().getItemInMainHand());
@@ -152,10 +147,10 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
         Block block = event.getBlock();
         Material blockType = event.getBlock().getType();
 
-        if (event.getPlayer().getInventory().getItemInMainHand() == null) return;
-        if (!event.getPlayer().getInventory().getItemInMainHand().hasItemMeta()) return;
-        if (event.getPlayer().getGameMode() == GameMode.CREATIVE) return;
-        if (event.getPlayer().getGameMode() == GameMode.SPECTATOR) return;
+        if (HAS_EMPTY_HAND(event.getPlayer())) return;
+        if (HAS_UNENCHANTED_ITEM(event.getPlayer())) return;
+        if (IS_CREATIVE(event.getPlayer())) return;
+        if (IS_SPECTATOR(event.getPlayer())) return;
 
         if (HOLDING_SWIFT_PLANTER(event) && FULLY_GROWN_CROPS(event)) {
             if (blockType.equals(Material.WHEAT) || blockType.equals(Material.POTATOES) || blockType.equals(Material.CARROTS)) {
@@ -172,10 +167,10 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
         Player player = event.getPlayer();
         Location location = event.getBlock().getLocation();
 
-        if (event.getPlayer().getInventory().getItemInMainHand() == null) return;
-        if (!event.getPlayer().getInventory().getItemInMainHand().hasItemMeta()) return;
-        if (event.getPlayer().getGameMode() == GameMode.CREATIVE) return;
-        if (event.getPlayer().getGameMode() == GameMode.SPECTATOR) return;
+        if (HAS_EMPTY_HAND(event.getPlayer())) return;
+        if (HAS_UNENCHANTED_ITEM(event.getPlayer())) return;
+        if (IS_CREATIVE(event.getPlayer())) return;
+        if (IS_SPECTATOR(event.getPlayer())) return;
 
         Collection<ItemStack> drops = block.getDrops(player.getInventory().getItemInMainHand());
         if (drops.isEmpty()) return;
@@ -260,14 +255,14 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
     @EventHandler()
     public void handleAnvils(PrepareAnvilEvent e) {
         List<Enchantment> noConflicts = new ArrayList<>();
-        handleAnvilEnchantment(e, CustomEnchants.BIG_BRAIN_MINING, true, noConflicts );
-        handleAnvilEnchantment(e, CustomEnchants.SWIFT_PLANTER, false, noConflicts);
-        handleAnvilEnchantment(e, CustomEnchants.MAGNET, false, noConflicts);
-        handleAnvilEnchantment(e, CustomEnchants.AUTO_SMELT, false, new ArrayList<Enchantment>(Arrays.asList(EnchantmentWrapper.SILK_TOUCH)));
-        handleAnvilEnchantment(e, CustomEnchants.EXPLOSIVE, false, noConflicts);
+        handleAnvilEnchantment(e, CustomEnchants.BIG_BRAIN_MINING, true, new ArrayList<Enchantment>(Arrays.asList(EnchantmentWrapper.SILK_TOUCH)), GroupedMaterials.getPickaxes());
+        handleAnvilEnchantment(e, CustomEnchants.SWIFT_PLANTER, false, noConflicts, GroupedMaterials.getHoes());
+        handleAnvilEnchantment(e, CustomEnchants.MAGNET, false, noConflicts, GroupedMaterials.getTools());
+        handleAnvilEnchantment(e, CustomEnchants.AUTO_SMELT, false, new ArrayList<Enchantment>(Arrays.asList(EnchantmentWrapper.SILK_TOUCH)), GroupedMaterials.getTools());
+        handleAnvilEnchantment(e, CustomEnchants.EXPLOSIVE, false, noConflicts, new ArrayList<Material>(Arrays.asList(Material.BOW)));
     }
 
-    private void handleAnvilEnchantment(PrepareAnvilEvent e, Enchantment enchantment, boolean withLevels, List<Enchantment> conflicts) {
+    private void handleAnvilEnchantment(PrepareAnvilEvent e, Enchantment enchantment, boolean withLevels, List<Enchantment> conflicts, List<Material> compatible) {
         try {
             boolean anvilInventoryFull = e.getInventory().getContents().length > 1
                     && e.getInventory().getContents()[0] != null
@@ -275,6 +270,8 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
 
             if (anvilInventoryFull) {
                 ItemStack item = e.getResult();
+
+                // if result is air (incompatible), check the two items and decide outcome
                 ItemStack leftItem = e.getInventory().getContents()[0];
                 ItemStack rightItem = e.getInventory().getContents()[1];
 
@@ -282,42 +279,46 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
                 boolean rightItemEnchanted = rightItem.getItemMeta().hasEnchant(enchantment);
                 int enchantLevel = 0;
 
-                // Upgrading Enchantment
-                if (leftItemEnchanted && rightItemEnchanted) {
-                    if (withLevels) {
-                        int max = enchantment.getMaxLevel();
-                        int leftLevel = leftItem.getItemMeta().getEnchantLevel(enchantment);
-                        int rightLevel = rightItem.getItemMeta().getEnchantLevel(enchantment);
-                        enchantLevel = Math.min(Math.min(leftLevel, rightLevel) + 1, max);
-                        if (leftLevel == rightLevel) removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(enchantLevel - 1)));
-                        else if (rightLevel < leftLevel) removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(enchantLevel)));
-                        else if (leftLevel < rightLevel) removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(leftLevel)));
-                    } else {
-                        removeFromLore(item, (ChatColor.GRAY + enchantment.getName()));
-                    }
-                    item.removeEnchantment(enchantment);
-                    addCustomEnchantToItem(item, enchantment, true, enchantLevel);
+                if (IS_AIR(item.getType()) && !isEnchantedBook(leftItem.getType()) && isEnchantedBook(rightItem.getType()) && rightItemEnchanted && compatible.contains(leftItem.getType())) item = (leftItem);
 
-                // Adding enchantment to item
-                } else if (leftItemEnchanted || rightItemEnchanted) {
-                    if (withLevels) {
-                        if (leftItemEnchanted) enchantLevel = leftItem.getItemMeta().getEnchantLevel(enchantment);
-                        else enchantLevel = rightItem.getItemMeta().getEnchantLevel(enchantment);
-                    }
-                    item.removeEnchantment(enchantment);
-                    addCustomEnchantToItem(item, enchantment, rightItemEnchanted, enchantLevel);
-                }
-
-                // Handle Conflicting Enchantments
-                for (Enchantment conflict : conflicts) {
-                    if (leftItem.getItemMeta().hasEnchant(enchantment) && rightItem.getItemMeta().hasEnchant(conflict)) {
-                        item.removeEnchantment(conflict);
-                    } else if (leftItem.getItemMeta().hasEnchant(conflict) && rightItem.getItemMeta().hasEnchant(enchantment)) {
-                        item.removeEnchantment(enchantment);
+                if (!IS_AIR(item.getType())) {
+                    // Upgrading Enchantment
+                    if (leftItemEnchanted && rightItemEnchanted) {
                         if (withLevels) {
-                            removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(enchantLevel)));
+                            int max = enchantment.getMaxLevel();
+                            int leftLevel = leftItem.getItemMeta().getEnchantLevel(enchantment);
+                            int rightLevel = rightItem.getItemMeta().getEnchantLevel(enchantment);
+                            enchantLevel = Math.min(Math.min(leftLevel, rightLevel) + 1, max);
+                            if (leftLevel == rightLevel) removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(enchantLevel - 1)));
+                            else if (rightLevel < leftLevel) removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(enchantLevel)));
+                            else if (leftLevel < rightLevel) removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(leftLevel)));
                         } else {
-                            removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " "));
+                            removeFromLore(item, (ChatColor.GRAY + enchantment.getName()));
+                        }
+                        item.removeEnchantment(enchantment);
+                        addCustomEnchantToItem(item, enchantment, true, enchantLevel);
+
+                        // Adding enchantment to item
+                    } else if (leftItemEnchanted || rightItemEnchanted) {
+                        if (withLevels) {
+                            if (leftItemEnchanted) enchantLevel = leftItem.getItemMeta().getEnchantLevel(enchantment);
+                            else enchantLevel = rightItem.getItemMeta().getEnchantLevel(enchantment);
+                        }
+                        item.removeEnchantment(enchantment);
+                        addCustomEnchantToItem(item, enchantment, rightItemEnchanted, enchantLevel);
+                    }
+
+                    // Handle Conflicting Enchantments
+                    for (Enchantment conflict : conflicts) {
+                        if (leftItem.getItemMeta().hasEnchant(enchantment) && rightItem.getItemMeta().hasEnchant(conflict)) {
+                            item.removeEnchantment(conflict);
+                        } else if (leftItem.getItemMeta().hasEnchant(conflict) && rightItem.getItemMeta().hasEnchant(enchantment)) {
+                            item.removeEnchantment(enchantment);
+                            if (withLevels) {
+                                removeFromLore(item, (ChatColor.GRAY + enchantment.getName() + " " + levelMapForLore(enchantLevel)));
+                            } else {
+                                removeFromLore(item, (ChatColor.GRAY + enchantment.getName()));
+                            }
                         }
                     }
                 }
@@ -341,29 +342,16 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
     }
 
     private void addCustomEnchantToItem(ItemStack item, Enchantment customEnchant, boolean withLore, int level) {
-        if (level == 0) {
-            item.addUnsafeEnchantment(customEnchant, 1);
-        } else {
-            item.addUnsafeEnchantment(customEnchant, level);
-        }
-        if (withLore) {
-            ItemMeta meta = item.getItemMeta();
-            List<String> lore = new ArrayList<String>();
-            lore.add(ChatColor.GRAY + customEnchant.getName() + " " + levelMapForLore(level));
-            if (meta.hasLore()) {
-                for (String l : meta.getLore()) {
-                    lore.add(l);
-                }
-            }
-            meta.setLore(lore);
-            item.setItemMeta(meta);
-        }
+        if (level == 0) item.addUnsafeEnchantment(customEnchant, 1);
+        else item.addUnsafeEnchantment(customEnchant, level);
+        if (withLore) addToItemLore(item, customEnchant.getName(), level );
     }
 
-    private void addToItemLore(ItemStack item, String newLore) {
+    private void addToItemLore(ItemStack item, String newLore, int level) {
         ItemMeta meta = item.getItemMeta();
         List<String> lore = new ArrayList<String>();
-        lore.add(ChatColor.GRAY + newLore);
+        if (level == 0) lore.add(ChatColor.GRAY + newLore);
+        else lore.add(ChatColor.GRAY + newLore + " " + levelMapForLore(level));
         if (meta.hasLore()) {
             for (String l : meta.getLore()) {
                 lore.add(l);
@@ -432,7 +420,11 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
     }
 
     private boolean isBook(Material item){
-        return item.equals(Material.BOOK);
+        return item.equals(Material.BOOK) || item.equals(Material.ENCHANTED_BOOK);
+    }
+
+    private boolean isEnchantedBook(Material item){
+        return item.equals(Material.ENCHANTED_BOOK);
     }
 
     private boolean isBow(Material item){
@@ -471,5 +463,29 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
         } else {
             return false;
         }
+    }
+
+    private boolean IS_CREATIVE(Player player) {
+        return player.getGameMode() == GameMode.CREATIVE;
+    }
+
+    private boolean IS_SPECTATOR(Player player) {
+        return player.getGameMode() == GameMode.SPECTATOR;
+    }
+
+    private boolean HAS_EMPTY_HAND(Player player) {
+        return player.getInventory().getItemInMainHand() == null;
+    }
+
+    private boolean HAS_UNENCHANTED_ITEM(Player player) {
+        return !player.getInventory().getItemInMainHand().hasItemMeta();
+    }
+
+    private boolean HAS_FULL_INVENTORY(Player player) {
+        return player.getInventory().firstEmpty() == -1;
+    }
+
+    private boolean IS_AIR(Material item) {
+        return item.equals(Material.AIR);
     }
 }
