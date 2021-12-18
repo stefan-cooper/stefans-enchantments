@@ -57,4 +57,32 @@ public class GroupedMaterials {
                 Material.GOLDEN_HOE
         ));
     }
+
+    public static List<Material> getXpBlocks() {
+        return new ArrayList<>(Arrays.asList(
+                Material.COAL_ORE,
+                Material.DIAMOND_ORE,
+                Material.REDSTONE_ORE,
+                Material.LAPIS_ORE,
+                Material.EMERALD_ORE,
+                Material.DEEPSLATE_COAL_ORE,
+                Material.DEEPSLATE_DIAMOND_ORE,
+                Material.DEEPSLATE_REDSTONE_ORE,
+                Material.DEEPSLATE_LAPIS_ORE,
+                Material.DEEPSLATE_EMERALD_ORE,
+                Material.NETHER_QUARTZ_ORE,
+                Material.NETHER_GOLD_ORE
+        ));
+    }
+
+    public static List<Material> getXpBlocksWithAutoSmelt() {
+        return new ArrayList<>(Arrays.asList(
+                Material.IRON_ORE,
+                Material.COPPER_ORE,
+                Material.GOLD_ORE,
+                Material.DEEPSLATE_IRON_ORE,
+                Material.DEEPSLATE_COPPER_ORE,
+                Material.DEEPSLATE_GOLD_ORE
+        ));
+    }
 }

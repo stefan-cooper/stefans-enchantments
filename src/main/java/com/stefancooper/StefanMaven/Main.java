@@ -18,6 +18,7 @@ import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.inventory.PrepareAnvilEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
@@ -34,6 +35,8 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
     public void onDisable() { // This is called when the plugin is unloaded from the server.
 
     }
+
+//    private Plugin plugin = this;
 
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (label.equalsIgnoreCase("magnet")) {
@@ -177,19 +180,22 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
 
         if (HOLDING_BIG_BRAIN_MINING(event)) {
             int enchantLevel = event.getPlayer().getInventory().getItemInMainHand().getItemMeta().getEnchantLevel(CustomEnchants.BIG_BRAIN_MINING);
-            if (enchantLevel == 5) {
-                event.setExpToDrop((event.getExpToDrop() + 1) * 17);
-            } else if (enchantLevel == 4) {
-                event.setExpToDrop((event.getExpToDrop() + 1) * 12);
-            } else if (enchantLevel == 3) {
-                event.setExpToDrop((event.getExpToDrop() + 1) * 8);
-            } else if (enchantLevel == 2) {
-                event.setExpToDrop((event.getExpToDrop() + 1) * 4);
-            } else if (enchantLevel == 1) {
-                event.setExpToDrop((event.getExpToDrop() + 1) * 2);
+
+            if ((HOLDING_AUTOSMELT(event) && GroupedMaterials.getXpBlocksWithAutoSmelt().contains(block.getType()))
+                    || GroupedMaterials.getXpBlocks().contains(block.getType())) {
+                if (enchantLevel == 5) {
+                    event.setExpToDrop((event.getExpToDrop() + 1) * 7);
+                } else if (enchantLevel == 4) {
+                    event.setExpToDrop((event.getExpToDrop() + 1) * 5);
+                } else if (enchantLevel == 3) {
+                    event.setExpToDrop((event.getExpToDrop() + 1) * 4);
+                } else if (enchantLevel == 2) {
+                    event.setExpToDrop((event.getExpToDrop() + 1) * 3);
+                } else if (enchantLevel == 1) {
+                    event.setExpToDrop((event.getExpToDrop() + 1) * 2);
+                }
             }
         }
-
     }
 
     @EventHandler()
@@ -279,7 +285,12 @@ public final class Main extends JavaPlugin implements Listener { // Create the c
                 boolean rightItemEnchanted = rightItem.getItemMeta().hasEnchant(enchantment);
                 int enchantLevel = 0;
 
-                if (IS_AIR(item.getType()) && !isEnchantedBook(leftItem.getType()) && isEnchantedBook(rightItem.getType()) && rightItemEnchanted && compatible.contains(leftItem.getType())) item = (leftItem);
+                if (IS_AIR(item.getType()) && !isEnchantedBook(leftItem.getType()) && isEnchantedBook(rightItem.getType()) && rightItemEnchanted && compatible.contains(leftItem.getType())) {
+                    Bukkit.getScheduler().runTask(this, () -> {
+                        e.getInventory().setRepairCost(5);
+                    });
+                    item = leftItem.clone();
+                }
 
                 if (!IS_AIR(item.getType())) {
                     // Upgrading Enchantment
